@@ -220,6 +220,14 @@ where
     ) -> &mut <Self::TransactionManager as TransactionManager<Self>>::TransactionStateData {
         task::block_in_place(|| self.0.transaction_state())
     }
+
+    fn instrumentation(&mut self) ->  &mut dyn diesel::connection::Instrumentation {
+        self.0.instrumentation()
+    }
+
+    fn set_instrumentation(&mut self, instrumentation: impl diesel::connection::Instrumentation) {
+        self.0.set_instrumentation(instrumentation)
+    }
 }
 
 impl<C> LoadConnection for DieselConnection<C>
