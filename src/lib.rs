@@ -7,10 +7,7 @@
 
 use async_trait::async_trait;
 use diesel::{
-    connection::{
-        AnsiTransactionManager, ConnectionGatWorkaround, LoadConnection, LoadRowIter,
-        SimpleConnection, TransactionManager,
-    },
+    connection::{AnsiTransactionManager, LoadConnection, SimpleConnection, TransactionManager},
     expression::QueryMetadata,
     query_builder::{Query, QueryFragment, QueryId},
     query_dsl::UpdateAndFetchResults,
@@ -161,12 +158,9 @@ where
     }
 }
 
-impl<'a, 'b, C> ConnectionGatWorkaround<'a, 'b, C::Backend> for DieselConnection<C>
-where
-    C: diesel::Connection<TransactionManager = AnsiTransactionManager>,
+impl<C> diesel::connection::ConnectionSealed for DieselConnection<C> where
+    C: diesel::Connection<TransactionManager = AnsiTransactionManager>
 {
-    type Cursor = <C as ConnectionGatWorkaround<'a, 'b, C::Backend>>::Cursor;
-    type Row = <C as ConnectionGatWorkaround<'a, 'b, C::Backend>>::Row;
 }
 
 impl<C> diesel::Connection for DieselConnection<C>
@@ -233,10 +227,13 @@ where
     C: LoadConnection,
     C: diesel::Connection<TransactionManager = AnsiTransactionManager>,
 {
+    type Row<'conn, 'query> = <C as LoadConnection>::Row<'conn, 'query> where C: 'conn;
+    type Cursor<'conn, 'query> = <C as LoadConnection>::Cursor<'conn, 'query> where C: 'conn;
+
     fn load<'conn, 'query, T>(
         &'conn mut self,
         source: T,
-    ) -> QueryResult<LoadRowIter<'conn, 'query, Self, Self::Backend>>
+    ) -> QueryResult<<C as LoadConnection>::Cursor<'conn, 'query>>
     where
         T: Query + QueryFragment<Self::Backend> + QueryId + 'query,
         Self::Backend: QueryMetadata<T::SqlType>,
